@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stray Animal Monitoring and Activity Analysis System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --dark-color: #2c3e50;
+            --light-color: #f8f9fa;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--dark-color) 0%, #1a2533 100%);
+            color: white;
+            padding: 30px 0;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card {
+            border-radius: 12px;
+            overflow: hidden;
+            border: none;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .stats-card {
+            text-align: center;
+            padding: 20px 15px;
+        }
+
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+
+        .today-upload {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #258cd1 100%);
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .total-images {
+            background: linear-gradient(135deg, var(--secondary-color) 0%, #27ae60 100%);
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .active-days {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .upload-form {
+            background-color: white;
+            padding: 25px;
+            border-radius: 12px;
+        }
+
+        .gallery-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .gallery-item {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            height: 220px;
+        }
+
+        .gallery-item:hover {
+            transform: scale(1.03);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .gallery-item:hover img {
+            transform: scale(1.1);
+        }
+
+        .image-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .gallery-item:hover .image-overlay {
+            transform: translateY(0);
+        }
+
+        .progress-container {
+            margin-top: 15px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+            height: 6px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            transition: width 1s ease;
+        }
+
+        footer {
+            background: var(--dark-color);
+            color: white;
+            padding: 25px 0;
+            margin-top: 50px;
+        }
+
+        .btn-upload {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--dark-color) 100%);
+            border: none;
+            padding: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: white;
+        }
+
+        .btn-upload:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+            color: yellow;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="container">
+            <h1><i class="bi bi-camera"></i> Stray Animal Monitoring and Activity Analysis System</h1>
+            <p class="lead">Online Database For O-Shelter</p>
+        </div>
+    </div>
+    <div class="container">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h3 class="card-title mb-3"><i class="bi bi-graph-up"></i>Upload Trend</h3>
+                <canvas id="uploadLineChart" height="100"></canvas>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card stats-card today-upload">
+                    <i class="bi bi-cloud-arrow-up fs-1"></i>
+                    <div class="stats-number" id="today-uploads">0</div>
+                    <p>Today's Uploads</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card stats-card total-images">
+                    <i class="bi bi-images fs-1"></i>
+                    <div class="stats-number" id="total-images">0</div>
+                    <p>Total Uploads</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card stats-card active-days">
+                    <i class="bi bi-calendar-check fs-1"></i>
+                    <div class="stats-number" id="active-days">0</div>
+                    <p>Active Days</p>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="card-title mb-4"><i class="bi bi-cloud-arrow-up me-2"></i>Upload Photo</h3>
+                        <form id="upload-form">
+                            <div class="mb-3">
+                                <input class="form-control" type="file" name="image" id="image-file" accept="image/*"
+                                    required>
+                            </div>
+                            <div class="progress-container">
+                                <div class="progress-bar" id="upload-progress" style="width: 0%"></div>
+                            </div>
+                            <button type="submit" class="btn btn-upload w-100 mt-3">
+                                <i class="bi bi-upload me-2"></i>上传图片
+                            </button>
+                        </form>
+                        <div id="upload-status" class="mt-3 text-center"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="card-title mb-4"><i class="bi bi-images me-2"></i>Recent Uploads</h3>
+                        <div class="gallery-container position-relative" style="height: 220px; overflow: hidden;">
+                            <div id="slideshow" style="height: 100%; position: relative;">
+                                </div>
+                            <button id="prev-slide"
+                                style="position: absolute; top: 50%; left: 5px; transform: translateY(-50%); background: rgba(0,0,0,0.3); border: none; color: white; font-size: 24px; padding: 5px 10px; border-radius: 5px; cursor: pointer;">&#9664;</button>
+                            <button id="next-slide"
+                                style="position: absolute; top: 50%; right: 5px; transform: translateY(-50%); background: rgba(0,0,0,0.3); border: none; color: white; font-size: 24px; padding: 5px 10px; border-radius: 5px; cursor: pointer;">&#9654;</button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <div class="card mb-4">
+        <div class="card-body">
+            <h3 class="card-title mb-4"><i class="bi bi-card-image me-2"></i>Images Gallery</h3>
+            <div class="gallery-container" id="all-gallery-container" style="max-height: 800px;"></div>
+            <div class="d-flex justify-content-center align-items-center mt-3">
+                <button id="prev-page" class="btn btn-secondary me-3" disabled>last page</button>
+                <span id="page-info">Page 1 of 1</span>
+                <button id="next-page" class="btn btn-secondary ms-3" disabled>next page</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center">
+        <div class="container">
+            <p class="mb-0">Online Database For O-Shelter &copy; 2025</p>
+        </div>
+    </footer>
+    <script>
+        let uploadLineChart;
+        let lastKnownImageFilenames = []; // To store the last fetched list of image filenames
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Initial loads
+            loadImages();
+            loadStats();
+            loadAllImages(); // Load all images for the gallery
+            loadUploadDataForChart();
+
+            // Event listener for manual upload
+            document.getElementById('upload-form').addEventListener('submit', handleUpload);
+
+            // Set up a polling interval to periodically check for new images
+            setInterval(checkAndRefreshContent, 1000); // Check every 5 seconds
+        });
+
+        // Function to compare current image list with the last known list
+        async function checkAndRefreshContent() {
+            try {
+                const response = await fetch('/images_list');
+                const currentFilenames = await response.json();
+
+                // Check if the image list has changed
+                if (JSON.stringify(currentFilenames) !== JSON.stringify(lastKnownImageFilenames)) {
+                    console.log('Image list changed, refreshing content...');
+                    lastKnownImageFilenames = currentFilenames; // Update the last known list
+                    loadImages(); // Refresh recent uploads slideshow
+                    loadStats(); // Refresh stats (Today's Uploads, Total Uploads, Active Days)
+                    loadAllImages(); // Refresh the paginated gallery
+                    loadUploadDataForChart(); // Refresh the chart
+                }
+            } catch (error) {
+                console.error('Error during content refresh check:', error);
+            }
+        }
+
+
+        // 拉取上传统计数据，更新图表
+        function loadUploadDataForChart() {
+            fetch('/images_list')
+                .then(res => res.json())
+                .then(images => {
+                    const dateCountMap = {};
+                    images.forEach(filename => {
+                        // 假设文件名开头是 "20250714_..."
+                        const match = filename.match(/^(\d{8})_/);
+                        if (match && match[1]) {
+                            const raw = match[1]; // 20250714
+                            // 如果你需要转成标准日期格式：
+                            const date = `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
+                            dateCountMap[date] = (dateCountMap[date] || 0) + 1;
+                        }
+                    });
+
+                    const sortedDates = Object.keys(dateCountMap).sort();
+                    const counts = sortedDates.map(date => dateCountMap[date]);
+
+                    const ctx = document.getElementById('uploadLineChart').getContext('2d');
+                    // Destroy previous chart instance if it exists to prevent overlap
+                    if (uploadLineChart) {
+                        uploadLineChart.destroy();
+                    }
+                    uploadLineChart = new Chart(ctx, { // Assign the new chart to the global variable
+                        type: 'line',
+                        data: {
+                            labels: sortedDates,
+                            datasets: [{
+                                label: 'Daily Uploads',
+                                data: counts,
+                                fill: false,
+                                borderColor: 'rgba(52, 152, 219, 1)',
+                                backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                                tension: 0.3,
+                                pointRadius: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    display: true
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Date'
+                                    }
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'Number of Uploads'
+                                    },
+                                    beginAtZero: true,
+                                    precision: 0
+                                }
+                            }
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading upload line chart:', error);
+                });
+        }
+
+
+
+
+        // ... 你现有的 handleUpload, loadImages, loadStats 函数保持不变 ...
+
+        function handleUpload(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('image-file');
+            const statusDiv = document.getElementById('upload-status');
+            const progressBar = document.getElementById('upload-progress');
+
+            if (!fileInput.files.length) return;
+
+            const file = fileInput.files[0];
+
+            const xhr = new XMLHttpRequest();
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    progressBar.style.width = `${(e.loaded / e.total) * 100}%`;
+                }
+            });
+
+            xhr.onload = () => {
+                if (xhr.status === 200) {
+                    statusDiv.innerHTML = '<div class="alert alert-success">Upload successful</div>';
+                    // Instead of full page reload, trigger a content refresh
+                    // setTimeout(() => window.location.reload(), 1000);
+                    setTimeout(() => {
+                        statusDiv.innerHTML = ''; // Clear status message
+                        progressBar.style.width = '0%'; // Reset progress bar
+                        fileInput.value = ''; // Clear file input
+                        checkAndRefreshContent(); // Manually trigger content refresh after upload
+                    }, 1000);
+                } else {
+                    statusDiv.innerHTML = `<div class="alert alert-danger">Upload failed: ${xhr.responseText}</div>`;
+                }
+            };
+
+            xhr.open('POST', '/upload');
+            // 告诉服务器我直接发原始二进制流，不是 multipart
+            xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+
+            // 直接把文件二进制读出来发出去
+            xhr.send(file);
+        }
+
+
+        let currentSlideIndex = 0;
+        let slideTimer;
+
+        function loadImages() {
+            fetch('/images_list')
+                .then(res => res.json())
+                .then(images => {
+                    document.getElementById('total-images').textContent = images.length;
+
+                    const slideshow = document.getElementById('slideshow');
+                    slideshow.innerHTML = ''; // 清空旧内容
+
+                    const recentImages = images.slice(0, 5); // Get the 5 most recent images
+
+                    if (recentImages.length === 0) {
+                        slideshow.innerHTML = '<p style="text-align: center; color: #666; margin-top: 50px;">No recent images.</p>';
+                        // Disable navigation buttons if no images
+                        document.getElementById('prev-slide').disabled = true;
+                        document.getElementById('next-slide').disabled = true;
+                        if (slideTimer) clearInterval(slideTimer);
+                        return;
+                    } else {
+                         document.getElementById('prev-slide').disabled = false;
+                         document.getElementById('next-slide').disabled = false;
+                    }
+
+
+                    recentImages.forEach((img, index) => {
+                        const div = document.createElement('div');
+                        div.className = 'gallery-item';
+                        div.style.position = 'absolute';
+                        div.style.top = '0';
+                        div.style.left = '0';
+                        div.style.width = '100%';
+                        div.style.height = '100%';
+                        div.style.transition = 'opacity 0.5s ease';
+                        div.style.opacity = (index === 0) ? '1' : '0';
+                        div.style.zIndex = (index === 0) ? '10' : '1';
+
+                        div.innerHTML = `
+            <img src="/images/${img}" alt="${img}" style="width: 100%; height: 100%; object-fit: contain;">
+            <div class="image-overlay">${img}</div>
+        `;
+                        slideshow.appendChild(div);
+                    });
+
+                    // 自动轮播函数
+                    function showSlide(index) {
+                        const slides = slideshow.children;
+                        for (let i = 0; i < slides.length; i++) {
+                            slides[i].style.opacity = '0';
+                            slides[i].style.zIndex = '1';
+                        }
+                        if (slides[index]) { // Ensure the slide exists before trying to show it
+                            slides[index].style.opacity = '1';
+                            slides[index].style.zIndex = '10';
+                        }
+                    }
+
+                    function nextSlide() {
+                        currentSlideIndex = (currentSlideIndex + 1) % recentImages.length;
+                        showSlide(currentSlideIndex);
+                    }
+
+                    // 清除旧定时器，防止多次调用重叠
+                    if (slideTimer) clearInterval(slideTimer);
+                    if (recentImages.length > 1) { // Only start slideshow if there's more than one image
+                        slideTimer = setInterval(nextSlide, 3000);
+                    } else {
+                        showSlide(0); // If only one image, just show it
+                    }
+
+
+                    // 添加左右箭头事件
+                    document.getElementById('prev-slide').onclick = () => {
+                        currentSlideIndex = (currentSlideIndex - 1 + recentImages.length) % recentImages.length;
+                        showSlide(currentSlideIndex);
+                        clearInterval(slideTimer);
+                        if (recentImages.length > 1) slideTimer = setInterval(nextSlide, 3000);
+                    };
+                    document.getElementById('next-slide').onclick = () => {
+                        nextSlide();
+                        clearInterval(slideTimer);
+                        if (recentImages.length > 1) slideTimer = setInterval(nextSlide, 3000);
+                    };
+                });
+        }
+
+
+        function loadStats() {
+            fetch('/images_list')
+                .then(res => res.json())
+                .then(images => {
+                    const now = new Date();
+                    const offset = now.getTimezoneOffset();
+                    // Calculate Beijing time (UTC+8). offset is in minutes, convert to hours then add 8 hours.
+                    // (offset / 60) gives hours difference from UTC. +8 for Beijing.
+                    // This calculation needs to be precise. A simpler way is to format UTC to Beijing directly.
+                    // For current date comparison, string manipulation based on filename is more direct
+                    // given your filename format.
+                    const todayDateString = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Shanghai' }).replace(/\//g, '');
+                    // Example: 20250727
+
+                    // Your filename format is YYYYMMDD_...
+                    const todayFilenamePrefix = new Date().getFullYear().toString() +
+                        (new Date().getMonth() + 1).toString().padStart(2, '0') +
+                        new Date().getDate().toString().padStart(2, '0') + '_';
+
+
+                    const todayCount = images.filter(name => name.startsWith(todayFilenamePrefix)).length;
+                    document.getElementById('today-uploads').textContent = todayCount;
+
+                    const activeDays = new Set(images.map(name => name.slice(0, 8))).size;
+                    document.getElementById('active-days').textContent = activeDays;
+                });
+        }
+        const IMAGES_PER_PAGE = 16; // 每页显示多少张
+        let currentPage = 1;
+        let totalPages = 1;
+        let allImages = [];
+        function renderPage(page) {
+            const container = document.getElementById('all-gallery-container');
+            container.innerHTML = '';
+
+            // 计算当前页图片的起止索引
+            const start = (page - 1) * IMAGES_PER_PAGE;
+            const end = Math.min(start + IMAGES_PER_PAGE, allImages.length);
+            const pageImages = allImages.slice(start, end);
+
+            container.innerHTML = pageImages.map(img => `
+        <div class="gallery-item" style="height: 300px; display: inline-block; width: 350px; margin: 5px;">
+            <img src="/images/${img}" alt="${img}" style="height: 100%; width: 100%; object-fit: contain;">
+            <div class="image-overlay">${img}</div>
+        </div>
+    `).join('');
+
+            // 更新页码信息
+            document.getElementById('page-info').textContent = `Page ${page} of ${totalPages}`;
+
+            // 更新按钮状态
+            document.getElementById('prev-page').disabled = (page === 1);
+            document.getElementById('next-page').disabled = (page === totalPages || totalPages === 0);
+        }
+
+        function loadAllImages() {
+            fetch('/images_list')
+                .then(res => res.json())
+                .then(images => {
+                    allImages = images;
+                    totalPages = Math.ceil(allImages.length / IMAGES_PER_PAGE);
+                    // Ensure currentPage doesn't exceed new totalPages after refresh
+                    if (currentPage > totalPages && totalPages > 0) {
+                        currentPage = totalPages;
+                    } else if (totalPages === 0) {
+                        currentPage = 0; // No pages if no images
+                    } else if (currentPage === 0 && totalPages > 0) {
+                        currentPage = 1; // If somehow 0, reset to 1
+                    }
+                    renderPage(currentPage === 0 ? 1 : currentPage); // Render page 1 if no images
+                })
+                .catch(err => {
+                    console.error('Error loading all historical images:', err);
+                });
+        }
+
+        // 绑定按钮事件
+        document.getElementById('prev-page').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderPage(currentPage);
+            }
+        });
+        document.getElementById('next-page').addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderPage(currentPage);
+            }
+        });
+
+        // 强制使用 HTTPS
+        if (location.protocol !== 'https:') {
+            location.href = 'https://' + location.host + location.pathname + location.search;
+        }
+    </script>
+</body>
+
+</html>
